@@ -60,7 +60,7 @@ public:
     void AddDocument(int document_id, const string& document) {
         const vector<string> words = SplitIntoWordsNoStop(document);
         for(const string& word: words) {
-            word_in_document_tf_[word][document_id] += 1.f / words.size();
+            word_in_document_tf_[word][document_id] += 1. / words.size();
         }
         document_count_++;
     }
@@ -91,6 +91,12 @@ private:
         set<string> minus_words;
     };
 
+    struct QueryWord {
+        string data;
+        bool is_minus;
+        bool is_stop;
+    };
+
     bool IsStopWord(const string& word) const {
         return stop_words_.count(word) > 0;
     }
@@ -105,16 +111,32 @@ private:
         return words;
     }
 
+    QueryWord ParseQueryWord(string word) const {
+        bool is_minus = false;
+        if(word[0] == '-') {
+            is_minus = true;
+            word = word.substr(1);
+        }
+        return {word, is_minus, IsStopWord(word)};
+    }
+
     Query ParseQuery(const string& text) const {
         Query query_words;
-        for (const string& word : SplitIntoWordsNoStop(text)) {
-            if(word[0] == '-') {
-                query_words.minus_words.insert(word.substr(1));
-            } else {
-                query_words.plus_words.insert(word);
+        for (const string& word : SplitIntoWords(text)) {
+            const QueryWord query_word = ParseQueryWord(word);
+            if(!query_word.is_stop) {
+                if(query_word.is_minus) {
+                    query_words.minus_words.insert(query_word.data);
+                } else {
+                    query_words.plus_words.insert(query_word.data);
+                }
             }
         }
         return query_words;
+    }
+
+    double CalculateIDF(const string& word) const {
+        return log(static_cast<double>(document_count_) / word_in_document_tf_.at(word).size());
     }
 
     vector<Document> FindAllDocuments(const Query& query_words) const {
@@ -124,7 +146,7 @@ private:
             if(word_in_document_tf_.count(word) == 0) {
                 continue;
             }
-            double IDF = log((double) document_count_ / word_in_document_tf_.at(word).size());
+            double IDF = CalculateIDF(word);
             for(const auto& [id, tf]: word_in_document_tf_.at(word)) {
                 document_relevance[id] += IDF * tf;
             }
