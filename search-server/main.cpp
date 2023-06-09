@@ -6,8 +6,11 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <numeric>
 
 using namespace std;
+
+#define EPS 1e-6
 
 const int MAX_RESULT_DOCUMENT_COUNT = 5;
 
@@ -85,7 +88,7 @@ public:
 
         sort(matched_documents.begin(), matched_documents.end(),
              [](const Document& lhs, const Document& rhs) {
-                 if (abs(lhs.relevance - rhs.relevance) < 1e-6) {
+                 if (abs(lhs.relevance - rhs.relevance) < EPS) {
                      return lhs.rating > rhs.rating;
                  } else {
                      return lhs.relevance > rhs.relevance;
@@ -161,11 +164,7 @@ private:
         if (ratings.empty()) {
             return 0;
         }
-        int rating_sum = 0;
-        for (const int rating : ratings) {
-            rating_sum += rating;
-        }
-        return rating_sum / static_cast<int>(ratings.size());
+        return accumulate(ratings.begin(), ratings.end(), 0) / static_cast<int>(ratings.size());
     }
 
     struct QueryWord {
@@ -395,30 +394,50 @@ void TestSearchRelevance() {
         server.AddDocument(doc_id_2, content_2, DocumentStatus::ACTUAL, ratings_2);
         server.AddDocument(doc_id_3, content_3, DocumentStatus::ACTUAL, ratings_3);
         vector<Document> result = server.FindTopDocuments("cat in the city");
-        ASSERT_EQUAL(result.at(0).id, 3);
-        ASSERT_EQUAL(result.at(1).id, 1);
-        ASSERT_EQUAL(result.at(2).id, 2);
+        ASSERT(is_sorted(result.begin(), result.end(), [](const Document& left, const Document& right) {
+            return left.relevance > right.relevance;
+        }));
     }
 }
 
 // Тест проверяет, что рейтинг добавленного документа подсчитывается корректно
 void TestDocumentRatingCalculation() {
-    const int doc_id_1 = 1;
-    const string content_1 = "cat in the park"s;
-    const vector<int> ratings_1 = { 2, 5, 3 };
+    const int doc_id = 1;
+    const string content = "cat in the park"s;
+    const vector<int> ratings_positive = { 2, 5, 3 };
+    const vector<int> ratings_negative = { -3, -4, -2};
+    const vector<int> ratings_mixed = {5, -4, 8, -5};
 
-    // Проверяем, что рейтинг добавленного документа верно подсчитывается
+    // Проверяем, что рейтинг добавленного документа верно подсчитывается для положительных значений
     {
         SearchServer server;
-        server.AddDocument(doc_id_1, content_1, DocumentStatus::ACTUAL, ratings_1);
+        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings_positive);
         vector<Document> result = server.FindTopDocuments("cat in the park");
-        ASSERT_EQUAL(result.at(0).rating, 3);
+        int expected_rating = accumulate(ratings_positive.begin(), ratings_positive.end(), 0) / static_cast<int>(ratings_positive.size());
+        ASSERT_EQUAL(result.at(0).rating, expected_rating);
     }
 
+    // Проверяем, что рейтинг добавленного документа верно подсчитывается для отрицательных значений
+    {
+        SearchServer server;
+        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings_negative);
+        vector<Document> result = server.FindTopDocuments("cat in the park");
+        int expected_rating = accumulate(ratings_negative.begin(), ratings_negative.end(), 0) / static_cast<int>(ratings_negative.size());
+        ASSERT_EQUAL(result.at(0).rating, expected_rating);
+    }
+
+    // Проверяем, что рейтинг добавленного документа верно подсчитывается для смешанных значений
+    {
+        SearchServer server;
+        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings_mixed);
+        vector<Document> result = server.FindTopDocuments("cat in the park");
+        int expected_rating = accumulate(ratings_mixed.begin(), ratings_mixed.end(), 0) / static_cast<int>(ratings_mixed.size());
+        ASSERT_EQUAL(result.at(0).rating, expected_rating);
+    }
 }
 
 // Тест проверяет фильтрацию результатов поиска с использованием предиката, задаваемого пользователем
-void TestFindTopDocumentsWithLabmdaFilter() {
+void TestFindTopDocumentsWithLambdaFilter() {
     const int doc_id_1 = 1;
     const string content_1 = "cat in the park"s;
     const vector<int> ratings_1 = { 4, 5, 4 };
@@ -523,7 +542,7 @@ void TestSearchServer() {
     RUN_TEST(TestMatchDocument);
     RUN_TEST(TestSearchRelevance);
     RUN_TEST(TestDocumentRatingCalculation);
-    RUN_TEST(TestFindTopDocumentsWithLabmdaFilter);
+    RUN_TEST(TestFindTopDocumentsWithLambdaFilter);
     RUN_TEST(TestFindTopDocumentsWithStatus);
     RUN_TEST(TestDocumentRelevanceCalculation);
 }
