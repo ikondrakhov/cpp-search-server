@@ -124,7 +124,7 @@ public:
 
         sort(found_documents.begin(), found_documents.end(),
              [](const Document& lhs, const Document& rhs) {
-                 if (abs(lhs.relevance - rhs.relevance) < 1e-6) {
+                 if (abs(lhs.relevance - rhs.relevance) < EPS) {
                      return lhs.rating > rhs.rating;
                  } else {
                      return lhs.relevance > rhs.relevance;
@@ -136,15 +136,11 @@ public:
         return found_documents;
     }
 
-    vector<Document> FindTopDocuments(const string& raw_query, DocumentStatus status) const {
+    vector<Document> FindTopDocuments(const string& raw_query, DocumentStatus status = DocumentStatus::ACTUAL) const {
         return FindTopDocuments(
             raw_query, [status]([[maybe_unused]] int document_id, DocumentStatus document_status, [[maybe_unused]] int rating) {
                 return document_status == status;
             });
-    }
-
-    vector<Document> FindTopDocuments(const string& raw_query) const {
-        return FindTopDocuments(raw_query, DocumentStatus::ACTUAL);
     }
 
     int GetDocumentCount() const {
@@ -175,10 +171,7 @@ public:
     }
 
     int GetDocumentId(int index) const {
-        if(index >= 0 && index < static_cast<int>(documents_.size())) {
-            return document_ids[index];
-        }
-        throw out_of_range("Document id is out of range");
+        return document_ids.at(index);
     }
 
 private:
