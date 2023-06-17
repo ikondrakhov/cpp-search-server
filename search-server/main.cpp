@@ -220,10 +220,19 @@ private:
 
     QueryWord ParseQueryWord(string text) const {
         bool is_minus = false;
+        if(!IsValidWord(text)) {
+            throw invalid_argument("Query word '"s + text + "' is invalid"s);
+        }
         // Word shouldn't be empty
         if (text[0] == '-') {
             is_minus = true;
             text = text.substr(1);
+            if(text.size() == 0) {
+                throw invalid_argument("Query minus word is empty");
+            }
+            if(text[0] == '-') {
+                throw invalid_argument("Query minus word '"s + text + "' contains two minuses"s);
+            }
         }
         return {text, is_minus, IsStopWord(text)};
     }
@@ -242,15 +251,9 @@ private:
     Query ParseQuery(const string& text) const {
         Query query;
         for (const string& word : SplitIntoWords(text)) {
-            if(!IsValidWord(word)) {
-                throw invalid_argument("Query word '"s + word + "' is invalid"s);
-            }
             const QueryWord query_word = ParseQueryWord(word);
             if (!query_word.is_stop) {
                 if (query_word.is_minus) {
-                    if(query_word.data.size() == 0 || query_word.data[0] == '-') {
-                        throw invalid_argument("Query word '"s + query_word.data + "' is invalid"s);
-                    }
                     query.minus_words.insert(query_word.data);
                 } else {
                     query.plus_words.insert(query_word.data);
