@@ -152,7 +152,7 @@ public:
     }
 
     tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query, int document_id) const {
-        auto query = ParseQuery(raw_query);
+        const Query query = ParseQuery(raw_query);
         vector<string> matched_words;
         for (const string& word : query.plus_words) {
             if (word_to_document_freqs_.count(word) == 0) {
@@ -171,7 +171,7 @@ public:
                 break;
             }
         }
-        return tuple<vector<string>, DocumentStatus>{matched_words, documents_.at(document_id).status};
+        return {matched_words, documents_.at(document_id).status};
     }
 
     int GetDocumentId(int index) const {
@@ -209,11 +209,7 @@ private:
         if (ratings.empty()) {
             return 0;
         }
-        int rating_sum = 0;
-        for (const int rating : ratings) {
-            rating_sum += rating;
-        }
-        return rating_sum / static_cast<int>(ratings.size());
+        return accumulate(ratings.begin(), ratings.end(), 0) / static_cast<int>(ratings.size());
     }
 
     struct QueryWord {
@@ -272,7 +268,6 @@ private:
     template <typename DocumentPredicate>
     vector<Document> FindAllDocuments(const Query& query,
                           DocumentPredicate document_predicate) const {
-        vector<Document> found_documents;
         map<int, double> document_to_relevance;
         for (const string& word : query.plus_words) {
             if (word_to_document_freqs_.count(word) == 0) {
@@ -296,6 +291,7 @@ private:
             }
         }
         
+        vector<Document> found_documents;
         for (const auto [document_id, relevance] : document_to_relevance) {
             found_documents.push_back({document_id, relevance, documents_.at(document_id).rating});
         }
