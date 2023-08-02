@@ -11,7 +11,7 @@
 #include "string_processing.h"
 #include "log_duration.h"
 
-#define EPS 1e-6
+const float EPS = 1e-6;
 
 const int MAX_RESULT_DOCUMENT_COUNT = 5;
 
