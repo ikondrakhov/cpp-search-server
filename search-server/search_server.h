@@ -112,22 +112,7 @@ SearchServer::SearchServer(const StringContainer& stop_words)
 
 template <typename DocumentPredicate>
 std::vector<Document> SearchServer::FindTopDocuments(const std::string_view& raw_query, DocumentPredicate document_predicate) const {
-    //LOG_DURATION_STREAM("Operation time", std::cout);
-    auto query = ParseQuery(raw_query);
-    auto found_documents = FindAllDocuments(query, document_predicate);
-
-    sort(found_documents.begin(), found_documents.end(),
-            [](const Document& lhs, const Document& rhs) {
-                if (std::abs(lhs.relevance - rhs.relevance) < EPS) {
-                    return lhs.rating > rhs.rating;
-                } else {
-                    return lhs.relevance > rhs.relevance;
-                }
-            });
-    if (found_documents.size() > MAX_RESULT_DOCUMENT_COUNT) {
-        found_documents.resize(MAX_RESULT_DOCUMENT_COUNT);
-    }
-    return found_documents;
+    return FindTopDocuments(std::execution::seq, raw_query, document_predicate);
 }
 
 template <typename DocumentPredicate, typename ExecutionPolicy>
