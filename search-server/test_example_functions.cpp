@@ -1,4 +1,4 @@
-#include "tests.h"
+#include "test_example_functions.h"
 #include "search_server.h"
 
 #include <algorithm>
@@ -45,8 +45,8 @@ void TestMatchDocument() {
     {
         SearchServer server(""s);
         server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
-        vector<string> expected_match_result = { "cat", "city", "the" };
-        vector<string> result = get<vector<string>>(server.MatchDocument("cat outside the city", doc_id));
+        vector<string_view> expected_match_result = { "cat", "city", "the" };
+        vector<string_view> result = get<vector<string_view>>(server.MatchDocument("cat outside the city", doc_id));
         sort(result.begin(), result.end());
         ASSERT_EQUAL(result, expected_match_result);
     }
@@ -55,7 +55,7 @@ void TestMatchDocument() {
     {
         SearchServer server(""s);
         server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
-        ASSERT(get<vector<string>>(server.MatchDocument("cat outside the -city", doc_id)).empty());
+        ASSERT(get<vector<string_view>>(server.MatchDocument("cat outside the -city", doc_id)).empty());
     }
 }
 
